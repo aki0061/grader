@@ -1,2 +1,1 @@
-grader
-======
+This repository is used for the submission of coursera program course in hw3-part3.
