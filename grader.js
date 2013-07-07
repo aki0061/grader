@@ -26,6 +26,10 @@ var program = require('commander');
 var cheerio = require('cheerio');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
+var URL_DEFAULT = "http://shrouded-beach-3400.herokuapp.com/";
+
+var sys = require('util');
+var rest = require('restler');
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
@@ -42,6 +46,35 @@ var cheerioHtmlFile = function(htmlfile) {
 
 var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
+};
+
+var checkHtmlURL = function(htmlurl, checksfile) {
+    var out = {};
+
+    rest.get(htmlurl).on('complete', function(result) {
+       if (result instanceof Error) {
+         sys.puts('Error: ' + result.message);
+         this.retry(5000); // try again after 5 sec
+       } else {
+          //sys.puts(result);
+
+      //$ = cheerioHtmlFile(htmlfile);
+      //console.log("result" , result);
+      $ = cheerio.load(result);
+      //$ = cheerioHtmlFile(htmlfile);
+      var checks = loadChecks(checksfile).sort();
+      for(var ii in checks) {
+  	var present = $(checks[ii]).length > 0;
+	out[checks[ii]] = present;
+        //console.log(ii , out[checks[ii]]);
+      }
+    //console.log(out);
+    console.log(JSON.stringify(out, null, 4));
+
+    return out;
+     }
+      
+    });
 };
 
 var checkHtmlFile = function(htmlfile, checksfile) {
@@ -61,14 +94,41 @@ var clone = function(fn) {
     return fn.bind({});
 };
 
+function sleep(time) {
+  var d1 = new Date().getTime();
+  var d2 = new Date().getTime();
+  while (d2 < d1 + time) {
+    d2 = new Date().getTime();
+   }
+   return;
+}
+
 if(require.main == module) {
     program
 	.option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+	.option('-u --url <url>', 'url', null , URL_DEFAULT)
 	.option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
 	.parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+
+    //if( program.file && program.checks ){
+
+      //var checkJson = checkHtmlFile(program.file, program.checks);
+      //var outJson = JSON.stringify(checkJson, null, 4);
+
+      //console.log(outJson);
+      //console.log("DEBUG:" , program.file , program.checks,program.url,program.argc);
+
+      var checkJson = checkHtmlURL(program.url, program.checks);
+      //sleep(2000);
+      //console.log("checkJson= " , checkJson);
+      var outJson = JSON.stringify(checkJson, null, 4);
+      //console.log(outJson);
+      //console.log("outJson=" , outJson);
+  
+     //    }
+    //else if( pgorgram.url && program.checks){
+    //  console.log("here");
+    //}
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
